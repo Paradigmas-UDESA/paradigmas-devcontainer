@@ -43,6 +43,15 @@ ENV CXX=g++ \
     CCACHE_DIR=/home/vscode/.ccache \
     PATH=/usr/lib/ccache:$PATH
 
+# desktop-lite's Xtigervnc defaults to 16-bit color depth
+# (VNC_RESOLUTION=...x16 in /usr/local/share/desktop-init.sh, only applied
+# when the var is unset). At depth 16 there is no GLXFBConfig matching
+# SFML's default context request, so sf::RenderWindow fails outright
+# (BadValue on GLXCreateContext) -- confirmed by reproducing and then
+# fixing this exact failure against the built image. 24-bit depth has a
+# matching FBConfig and SFML opens/draws/displays correctly.
+ENV VNC_RESOLUTION=1440x768x24
+
 # Base image already creates the non-root `vscode` user; UID/GID mapping to
 # the host user is handled by the Dev Containers extension at runtime
 # (updateRemoteUserUID), not here.
