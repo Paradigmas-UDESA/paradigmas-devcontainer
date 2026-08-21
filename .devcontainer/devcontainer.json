@@ -1,0 +1,21 @@
+{
+  // This is the BUILD SOURCE for the course image -- it is the only
+  // devcontainer.json in the whole course that is allowed to list
+  // "features". Activity repos reference the resulting image by tag and
+  // must stay feature-free, otherwise students pay the feature-install cost
+  // on every activity instead of once at image-build time.
+  "name": "Paradigmas UDESA (image build)",
+  "build": {
+    "dockerfile": "../Dockerfile"
+  },
+  "features": {
+    // Fluxbox desktop + noVNC server, baked into the image so GUI
+    // activities (SFML) are reachable at http://localhost:6080 with no
+    // per-activity setup.
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "password": "vscode",
+      "webPort": "6080",
+      "vncPort": "5901"
+    }
+  }
+}
