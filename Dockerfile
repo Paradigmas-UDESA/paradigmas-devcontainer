@@ -52,6 +52,18 @@ ENV CXX=g++ \
 # matching FBConfig and SFML opens/draws/displays correctly.
 ENV VNC_RESOLUTION=1440x768x24
 
+# Pre-create CCACHE_DIR owned by vscode *before* it becomes a volume mount
+# point. The shared ccache volume (mounted here by every activity repo's
+# devcontainer.json) gets its initial ownership from whatever exists at
+# this path in the image on first creation -- if nothing exists here,
+# Docker creates the mount point as root, and the non-root vscode user
+# then gets "ccache: error: Permission denied" on every compile. This
+# only covers volumes created fresh from this image; the
+# postStartCommand chown in template/devcontainer.json re-fixes ownership
+# on every start too, since Docker won't retroactively fix a
+# volume that was already created root-owned by an older image.
+RUN mkdir -p /home/vscode/.ccache && chown -R vscode:vscode /home/vscode/.ccache
+
 # Base image already creates the non-root `vscode` user; UID/GID mapping to
 # the host user is handled by the Dev Containers extension at runtime
 # (updateRemoteUserUID), not here.

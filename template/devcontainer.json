@@ -27,9 +27,14 @@
       "onAutoForward": "silent"
     }
   },
-  // Starts the VNC/noVNC server baked into the image. Runs on every
-  // container *start* (not just create), so it survives restarts.
-  "postStartCommand": "/usr/local/share/desktop-init.sh",
+  // 1) Named volumes can get created root-owned (e.g. if mounted against
+  //    an older image, or a fresh Docker install) -- vscode then can't
+  //    write to the shared ccache dir at all ("ccache: error: Permission
+  //    denied" on every compile). Re-chown on every start so this
+  //    self-heals regardless of how the volume got created.
+  // 2) Starts the VNC/noVNC server baked into the image. Runs on every
+  //    container *start* (not just create), so it survives restarts.
+  "postStartCommand": "sudo chown -R vscode:vscode /home/vscode/.ccache && /usr/local/share/desktop-init.sh",
 
   "customizations": {
     "vscode": {
