@@ -16,8 +16,11 @@ toolchain every activity needs.
 ## Layout
 
 - `Dockerfile` — the toolchain: g++, make/cmake, gdb/valgrind, googletest,
-  SFML 2.6 + Mesa software rasterizer. Ubuntu 24.04 (noble) is pinned
-  deliberately — see comments in the Dockerfile before changing the base.
+  Mesa software rasterizer, and SFML 2.6.2 **built from source** with one
+  upstream fix backported (Ubuntu's libsfml-dev cannot reliably open a
+  window over VNC — read the long comment above the SFML block before
+  touching it). Ubuntu 24.04 (noble) is pinned deliberately — see comments
+  in the Dockerfile before changing the base.
 - `.devcontainer/devcontainer.json` — the **build source**. This is the only
   devcontainer.json in the whole course allowed to list `features` (it adds
   `desktop-lite` for the noVNC GUI path). Features here get baked into the
@@ -48,6 +51,10 @@ toolchain every activity needs.
      ../TP-Hive
    ```
 
+   Note that a plain push to `main` triggers a build of the *default* tag
+   (`2026a`) and would overwrite it, which is exactly what this rule
+   forbids. For a mid-semester fix, dispatch the workflow manually with the
+   new tag instead of relying on the push trigger.
 4. Make sure the GHCR package is set to **public** (Package settings →
    Change visibility) so students can pull without `docker login`.
 
@@ -70,6 +77,34 @@ docker run --rm ghcr.io/paradigmas-udesa/paradigmas:2026a bash -c '
   valgrind --version
 '
 ```
+
+### GUI path
+
+The SFML/GLX bug this image patches (see the Dockerfile) failed on roughly
+half of all runs, so a single successful launch proves nothing. Check that a
+window opens on **every** run:
+
+```sh
+docker run --rm --init \
+  --entrypoint /usr/local/share/desktop-init.sh \
+  ghcr.io/paradigmas-udesa/paradigmas:2026a bash -c '
+    sleep 4
+    printf "%s\n" \
+      "#include <SFML/Graphics.hpp>" \
+      "int main(){ sf::RenderWindow w(sf::VideoMode::getDesktopMode(), \"t\");" \
+      "            w.clear(); w.display(); }" > /tmp/w.cpp
+    g++ /tmp/w.cpp -o /tmp/w -lsfml-graphics -lsfml-window -lsfml-system || exit 1
+    fail=0
+    for i in $(seq 1 20); do
+      DISPLAY=:1 /tmp/w 2>/tmp/err || { fail=$((fail+1)); head -1 /tmp/err; }
+    done
+    echo "failures: $fail/20"
+  '
+```
+
+`failures: 0/20` is the only acceptable result. Anything else means the SFML
+patch did not apply — the Dockerfile has `grep` guards that should have
+failed the build first.
 
 Full rollout and verification checklist lives in the design plan this repo
 was scaffolded from.
