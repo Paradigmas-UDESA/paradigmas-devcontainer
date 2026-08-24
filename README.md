@@ -36,17 +36,42 @@ toolchain every activity needs.
 - `scripts/sync-devcontainer.sh` — pushes `template/devcontainer.json` into
   one or more activity repos. Run it whenever you bump the image tag.
 
-## Publishing a new image
+## Publishing a new version
 
-1. Edit the `Dockerfile` and/or `.devcontainer/devcontainer.json`.
-2. Publish by running the workflow manually via **Actions → Build and push
-   course image → Run workflow**, entering the tag (e.g. `2026a.2`). Pushing
-   to `main` does *not* publish a course tag — it rebuilds `edge` only, as a
-   build check.
-3. **Never overwrite an existing tag mid-semester.** A student who already
-   pulled `2026a` keeps the old bits while a fresh pull gets new ones —
-   that's an irreproducible-bug generator. Bump to `2026a.2`, update
-   `template/devcontainer.json`'s `image:` field, then sync it out:
+Publishing is always deliberate: a push to `main` rebuilds only the throwaway
+`edge` tag, and a course tag is written *only* by a manual workflow dispatch.
+
+**The rule that shapes the rest: never overwrite a tag a student may already
+have pulled.** They keep the old bits while a fresh pull gets new ones — an
+irreproducible-bug generator. Mid-semester fixes get a new tag (`2026a.2`,
+`2026a.3`, …); `2026a` itself is only ever written before the semester starts.
+
+1. **Edit and land the change.** Change the `Dockerfile` and/or
+   `.devcontainer/devcontainer.json` and push to `main`. That publishes `edge`
+   only — use it as the build check (it is what catches a `SFML_VERSION` bump
+   that silently breaks the patch greps).
+
+2. **Pick the tag.** `2026a` for the first publish of a course edition,
+   `2026a.2` and onward for anything after students have started pulling.
+
+3. **Dispatch the build.** **Actions → Build and push course image → Run
+   workflow**, entering the tag. Or from the CLI:
+
+   ```sh
+   gh workflow run build-image.yml -f tag=2026a.2
+   gh run watch
+   ```
+
+   The workflow has to exist on `main` for dispatch to be offered at all. Give
+   it time: `linux/arm64` is built under QEMU emulation and compiles SFML from
+   source, so this is much slower than a native build.
+
+4. **Verify before pointing anyone at it** — see *Verifying a published image*
+   below. The GUI repeat-run loop is not optional: the bug this image patches
+   was a coin flip, so one successful launch proves nothing.
+
+5. **Point the activity repos at the new tag.** Edit `image:` in
+   `template/devcontainer.json`, then push it out:
 
    ```sh
    scripts/sync-devcontainer.sh \
@@ -55,12 +80,16 @@ toolchain every activity needs.
      ../TP-Hive
    ```
 
-   The workflow enforces this from its side: a push to `main` can only
-   publish `edge`, and `latest` moves only on an explicit dispatch of the
-   default course tag. Nothing but a deliberate dispatch can land on a tag a
-   student may already have pulled.
-4. Make sure the GHCR package is set to **public** (Package settings →
-   Change visibility) so students can pull without `docker login`.
+   Commit the bump here *and* the synced file in each activity repo — a tag
+   nobody references has not actually shipped.
+
+6. **Tell students to rebuild.** An already-created container keeps running the
+   old image until they run **Dev Containers: Rebuild Container**; pulling the
+   new tag happens as part of that rebuild.
+
+First publish of an edition only: make sure the GHCR package is set to
+**public** (Package settings → Change visibility) so students can pull without
+`docker login`.
 
 ## Verifying a published image
 
