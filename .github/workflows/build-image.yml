@@ -1,5 +1,10 @@
 name: Build and push course image
 
+# Student-facing tags are published ONLY by an explicit workflow_dispatch.
+# A push to main republishes the throwaway `edge` tag instead, which proves
+# the image still builds (the SFML patch greps in particular) without ever
+# moving a tag a student may already have pulled -- see the tag-discipline
+# note in the repo README.
 on:
   push:
     branches: [main]
@@ -37,9 +42,21 @@ jobs:
       - name: Install devcontainer CLI
         run: npm install -g @devcontainers/cli
 
+      # Inputs are read via env rather than interpolated into the script body,
+      # so a tag string can never be evaluated as shell.
       - name: Resolve tag
         id: tag
-        run: echo "tag=${{ github.event.inputs.tag || '2026a' }}" >> "$GITHUB_OUTPUT"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="edge"
+          fi
+          echo "Publishing tag: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       # Use the devcontainer CLI (not a bare `docker build`) so that
       # "features" declared in .devcontainer/devcontainer.json (desktop-lite)
@@ -54,10 +71,12 @@ jobs:
             --push
 
       # Never move `latest` mid-semester onto a tag students already have --
-      # see the tag-discipline note in the repo README. This step only runs
-      # for the default course-edition tag on an explicit dispatch.
+      # see the tag-discipline note in the repo README. Both conditions are
+      # required: the event check keeps a push to main from moving `latest`,
+      # and the tag check keeps a mid-semester `2026a.2` dispatch from doing
+      # so either.
       - name: Also tag latest
-        if: steps.tag.outputs.tag == '2026a'
+        if: github.event_name == 'workflow_dispatch' && steps.tag.outputs.tag == '2026a'
         run: |
           docker buildx imagetools create \
             --tag ghcr.io/paradigmas-udesa/paradigmas:latest \

@@ -31,14 +31,18 @@ toolchain every activity needs.
 - `.github/workflows/build-image.yml` — builds `linux/amd64` + `linux/arm64`
   via the `devcontainer` CLI (not a bare `docker build`, so features are
   actually installed) and pushes to `ghcr.io/paradigmas-udesa/paradigmas`.
+  Course tags come only from a manual dispatch; a push to `main` republishes
+  the throwaway `edge` tag.
 - `scripts/sync-devcontainer.sh` — pushes `template/devcontainer.json` into
   one or more activity repos. Run it whenever you bump the image tag.
 
 ## Publishing a new image
 
 1. Edit the `Dockerfile` and/or `.devcontainer/devcontainer.json`.
-2. Push to `main`, or run the workflow manually via **Actions → Build and
-   push course image → Run workflow**, entering the tag (e.g. `2026a.2`).
+2. Publish by running the workflow manually via **Actions → Build and push
+   course image → Run workflow**, entering the tag (e.g. `2026a.2`). Pushing
+   to `main` does *not* publish a course tag — it rebuilds `edge` only, as a
+   build check.
 3. **Never overwrite an existing tag mid-semester.** A student who already
    pulled `2026a` keeps the old bits while a fresh pull gets new ones —
    that's an irreproducible-bug generator. Bump to `2026a.2`, update
@@ -51,10 +55,10 @@ toolchain every activity needs.
      ../TP-Hive
    ```
 
-   Note that a plain push to `main` triggers a build of the *default* tag
-   (`2026a`) and would overwrite it, which is exactly what this rule
-   forbids. For a mid-semester fix, dispatch the workflow manually with the
-   new tag instead of relying on the push trigger.
+   The workflow enforces this from its side: a push to `main` can only
+   publish `edge`, and `latest` moves only on an explicit dispatch of the
+   default course tag. Nothing but a deliberate dispatch can land on a tag a
+   student may already have pulled.
 4. Make sure the GHCR package is set to **public** (Package settings →
    Change visibility) so students can pull without `docker login`.
 
