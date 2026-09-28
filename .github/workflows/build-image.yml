@@ -2,9 +2,8 @@ name: Build and push course image
 
 # Student-facing tags are published ONLY by an explicit workflow_dispatch.
 # A push to main republishes the throwaway `edge` tag instead, which proves
-# the image still builds (the SFML patch greps in particular) without ever
-# moving a tag a student may already have pulled -- see the tag-discipline
-# note in the repo README.
+# the image still builds without ever moving a tag a student may already
+# have pulled -- see the tag-discipline note in the repo README.
 on:
   push:
     branches: [main]
@@ -59,8 +58,8 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       # Use the devcontainer CLI (not a bare `docker build`) so that
-      # "features" declared in .devcontainer/devcontainer.json (desktop-lite)
-      # are actually installed into the pushed image, rather than only
+      # "features" declared in .devcontainer/devcontainer.json (none right
+      # now) would actually be installed into the pushed image, rather than only
       # working when a dev container is freshly created from source.
       - name: Build and push (multi-arch)
         run: |
