@@ -7,7 +7,7 @@
   // Bumping the course image? Edit the tag here, then run
   // scripts/sync-devcontainer.sh against every activity repo.
   "name": "Paradigmas",
-  "image": "ghcr.io/paradigmas-udesa/paradigmas:2026a",
+  "image": "ghcr.io/paradigmas-udesa/paradigmas:2026a.2",
 
   // Shared across every activity container of every student -- this is what
   // makes "one container per activity repo" cheap instead of N cold caches.
